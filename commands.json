@@ -1,0 +1,11 @@
+{
+	"prefix": "!",
+  "not-found": "Command not found!",
+  "wait-time": 300,
+  "callback": "http://example.org/",
+	"commands": {
+		"greet": "helo!!!! from me",
+		"sayhi": "hiiiii",
+    "yeye": "abluble"
+	}
+}
