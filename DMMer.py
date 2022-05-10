@@ -8,17 +8,21 @@ import os
 tmp_json = json.loads(open('commands.json', 'r').read())
 COMMAND_NOT_FOUND_MSG = tmp_json['not-found']
 WAIT_TIME = tmp_json['wait-time']
-JSON_PATH = 'command_usage.json'
 CALLBACK = tmp_json['callback']
-DM_COUNT_TO_GET = 20
+DM_COUNT_TO_GET = tmp_json['dm-count-to-get']
+JSON_PATH = 'command_usage.json'
 
 def get_cred(credential: str):
     ''' Gets credentials '''
-    cred_dict = {}
-    with open('credentials.txt', 'r') as file:
-        for line in file.read().split('\n'):
-            cred_dict[line.split('=')[0]] = line.split('=')[1]
-        return cred_dict[credential]
+    cred_dict = json.loads(open('credentials.json', 'r').read())
+    return cred_dict[credential]
+
+def set_cred(credential: str, value):
+    ''' Sets credentials (used for token login) '''
+    cred_dict = json.loads(open('credentials.json', 'r').read())
+    cred_dict[credential] = value
+    open('credentials.json', 'w').write(json.dumps(cred_dict, indent=2))
+
 
 def load_commands(json: dict):
     ''' Creates a command array '''
@@ -45,22 +49,31 @@ def check_for_commands(commands, comm):
 
 def authenticate():
     ''' Authenticates twitter api '''
-    api_key = get_cred('API_KEY')
-    api_key_secret = get_cred('API_KEY_SECRET')
-    tweepy.API()
-    auth = tweepy.OAuth1UserHandler(
-        api_key,
-        api_key_secret,
-        callback=CALLBACK
-    )
-    print('Get the auth:')
-    print(auth.get_authorization_url())
-    oauth_verifier = input('Paste oauth_verifier here (its in the redirected url): ')
-    access_token, access_token_secret = (
-        auth.get_access_token(
-            oauth_verifier
+    api_key = get_cred('api-key')
+    api_key_secret = get_cred('api-key-secret')
+    access_token = get_cred('access-token')
+    access_token_secret = get_cred('access-token-secret')
+
+    if access_token == '':
+        auth = tweepy.OAuth1UserHandler(
+            api_key,
+            api_key_secret,
+            callback=CALLBACK
         )
-    )
+        print('Get the auth:')
+        print(auth.get_authorization_url())
+        oauth_verifier = input('Paste oauth_verifier here (its in the redirected url): ')
+        access_token, access_token_secret = (
+            auth.get_access_token(
+                oauth_verifier
+            )
+        )
+
+        set_cred('access-token', access_token)
+        set_cred('access-token-secret', access_token_secret)
+    
+    access_token = get_cred('access-token')
+    access_token_secret = get_cred('access-token-secret')
 
     new_auth = tweepy.OAuth1UserHandler(
         api_key,

@@ -3,9 +3,9 @@
   "not-found": "Command not found!",
   "wait-time": 300,
   "callback": "http://example.org/",
+  "dm-count-to-get": 30,
   "commands": {
-    "greet": "helo!!!! from me",
     "sayhi": "hiiiii",
-    "yeye": "abluble"
+    "greet": "helo its me"
   }
 }
