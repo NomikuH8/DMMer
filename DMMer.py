@@ -71,7 +71,7 @@ def authenticate():
 
         set_cred('access-token', access_token)
         set_cred('access-token-secret', access_token_secret)
-    
+
     access_token = get_cred('access-token')
     access_token_secret = get_cred('access-token-secret')
 
@@ -89,15 +89,19 @@ def get_dms(api: tweepy.API, prefix: str):
     screen_name = api.get_settings()['screen_name']
     usr_json = api.get_user(screen_name=screen_name)._json
     my_id = usr_json['id_str']
-    my_dms = api.get_direct_messages(count=20)
+    my_dms = api.get_direct_messages(count=DM_COUNT_TO_GET)
     valid_dms = []
+    dms = []
     for dm in my_dms:
+        dms.append(dm.message_create)
         if dm.message_create['sender_id'] != my_id:
             if dm.message_create['message_data']['text'][0] == prefix:
                 valid_dms.append({
                     'sender': dm.message_create['sender_id'],
                     'command': dm.message_create['message_data']['text']
                 })
+
+    open('lastdms.json', 'w').write(json.dumps(dms, indent=2))
     return valid_dms
 
 def send_dms(api: tweepy.API, dms: list, commands: list, prefix: str):
@@ -108,13 +112,13 @@ def send_dms(api: tweepy.API, dms: list, commands: list, prefix: str):
         add_id_to_command(i['sender'], i['command'])
         output = check_for_commands(commands, i['command'])
         api.send_direct_message(i['sender'], output)
-        time.sleep(2)
+        time.sleep(5)
 
 def create_command_json(command: str):
     ''' creates the json and/or changes the date '''
     ids_json = {}
     date = str(datetime.date.today())
-    
+
     try: open(JSON_PATH, 'x')
     except: pass
 
@@ -150,7 +154,7 @@ def delete_json():
     try:
         os.remove(JSON_PATH)
         print('Removed command usage log!')
-    except: 
+    except:
         print("Couldn't remove command usage log! (maybe it doesn't exist)")
 
 def run_timer():
@@ -158,12 +162,16 @@ def run_timer():
     wait_time = WAIT_TIME
     api = authenticate()
     while True:
-        run(api)
-        times_ran += 1
-        for i in range(wait_time):
-            print(f'                        ; Times ran: {times_ran}', end='\r')
-            print(f'Time until next run: {wait_time - i}', end='\r')
-            time.sleep(1)
+        try:
+            run(api)
+            times_ran += 1
+            for i in range(wait_time):
+                print(f'                        ; Times ran: {times_ran}', end='\r')
+                print(f'Time until next run: {wait_time - i}', end='\r')
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print('Exitting DMMer!')
+            sys.exit(0)
 
 def run(api: tweepy.API):
     ''' runs the bot once '''
