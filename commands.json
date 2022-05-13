@@ -5,7 +5,7 @@
   "callback": "http://example.org/",
   "dm-count-to-get": 30,
   "commands": {
-    "sayhi": "hiiiii",
-    "greet": "helo its me"
+    "command1": "output1",
+    "command2": "output2"
   }
 }

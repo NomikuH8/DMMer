@@ -12,6 +12,16 @@ CALLBACK = tmp_json['callback']
 DM_COUNT_TO_GET = tmp_json['dm-count-to-get']
 JSON_PATH = 'command_usage.json'
 
+# how i want new command_usage.json to look:
+#   [
+#     {
+#       id: "1234567891234567891",
+#       user: "000000000",
+#       command: "!sayhi"
+#     },
+#     <same>
+#   ]
+
 def get_cred(credential: str):
     ''' Gets credentials '''
     cred_dict = json.loads(open('credentials.json', 'r').read())
@@ -94,12 +104,13 @@ def get_dms(api: tweepy.API, prefix: str):
     dms = []
     for dm in my_dms:
         dms.append(dm.message_create)
-        if dm.message_create['sender_id'] != my_id:
-            if dm.message_create['message_data']['text'][0] == prefix:
-                valid_dms.append({
-                    'sender': dm.message_create['sender_id'],
-                    'command': dm.message_create['message_data']['text']
-                })
+        # if dm.message_create['sender_id'] != my_id:
+        if dm.message_create['message_data']['text'][0] == prefix:
+            valid_dms.append({
+                'msg_id': dm._json['id'],
+                'sender': dm.message_create['sender_id'],
+                'command': dm.message_create['message_data']['text'].lower()
+            })
 
     open('lastdms.json', 'w').write(json.dumps(dms, indent=2))
     return valid_dms
@@ -107,48 +118,37 @@ def get_dms(api: tweepy.API, prefix: str):
 def send_dms(api: tweepy.API, dms: list, commands: list, prefix: str):
     ''' Sends dms for the get_dms return '''
     for i in dms:
-        if is_id_in_command(i['sender'], i['command']):
+        if is_id_in_command(i['msg_id']):
             continue
-        add_id_to_command(i['sender'], i['command'])
+        add_id_to_command(i['msg_id'], i['sender'], i['command'])
         output = check_for_commands(commands, i['command'])
         api.send_direct_message(i['sender'], output)
         time.sleep(5)
 
-def create_command_json(command: str):
-    ''' creates the json and/or changes the date '''
-    ids_json = {}
-    date = str(datetime.date.today())
-
-    try: open(JSON_PATH, 'x')
-    except: pass
-
-    try:
-        ids_json = json.loads(open(JSON_PATH, 'r').read())
-        type(ids_json[command])
-    except:
-        ids_json[command] = {}
-        ids_json[command]['users'] = []
-        ids_json[command]['date'] = date
-
-    # if ids_json[command]['date'] != date:
-    #     ids_json[command]['date'] = date
-    #     ids_json[command]['users'] = []
-
-    return ids_json
-
-def is_id_in_command(user_id: str, command: str):
+def is_id_in_command(msg_id: str):
     ''' Checks if user is in command's command_usage.json '''
-    ids_json = create_command_json(command)
-    for i in ids_json[command]['users']:
-        if user_id == i:
+    if not os.path.exists(JSON_PATH):
+        return False
+    usage_json = json.loads(open(JSON_PATH, 'r').read())
+    for i in usage_json:
+        if msg_id == i['msg_id']:
             return True
     return False
+        
 
-def add_id_to_command(user_id: str, command: str):
+def add_id_to_command(msg_id: str, user_id: str, command: str):
     ''' Adds id to command_usage.json, to prevent duplicated messages '''
-    ids_json = create_command_json(command)
-    ids_json[command]['users'].append(user_id)
-    open(JSON_PATH, 'w').write(json.dumps(ids_json, indent=2))
+    usage_json = []
+    if os.path.exists(JSON_PATH):
+        usage_json = json.loads(open(JSON_PATH, 'r').read())
+    usage_json.reverse()
+    usage_json.append({
+        "msg_id": msg_id,
+        "user_id": user_id,
+        "command": command
+    })
+    usage_json.reverse()
+    open(JSON_PATH, 'w').write(json.dumps(usage_json, indent=2))
 
 def delete_json():
     try:
